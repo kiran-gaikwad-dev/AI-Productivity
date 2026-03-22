@@ -88,6 +88,12 @@ const Dashboard = () => {
         distraction: Math.round((rawHourly[hour] || 0) * 0.4)
       })) : []);
 
+  const topDistractions = globalStats?.top_distractions ? 
+    Object.keys(globalStats.top_distractions).map(site => ({
+      site,
+      minutes: globalStats.top_distractions[site]
+    })) : [];
+
   const rawReg = globalStats?.regression_predictions;
   const regressionPredictions = Array.isArray(rawReg) ? rawReg : [];
 
