@@ -1,0 +1,53 @@
+import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import Dashboard from './components/Dashboard'
+
+function App() {
+  return (
+    // Applied a sleek modern background and the Poppins font globally.
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col selection:bg-blue-200">
+      {/* Enhanced header with glassmorphism and Framer Motion animation */}
+      <motion.header 
+        initial={{ y: -50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        className="sticky top-0 z-50 bg-white/80 backdrop-blur-md shadow-sm border-b border-slate-200 px-8 py-5 flex justify-between items-center"
+      >
+        <div className="flex items-center space-x-3">
+          {/* Logo animation */}
+          <motion.div 
+            whileHover={{ rotate: 180 }}
+            transition={{ duration: 0.5 }}
+            className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-md flex items-center justify-center shrink-0"
+          >
+            <div className="w-3 h-3 bg-white rounded-full" />
+          </motion.div>
+          <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 tracking-tight">
+            AI Productivity Analyzer
+          </h1>
+        </div>
+        
+        <motion.div 
+          whileHover={{ scale: 1.05 }}
+          className="flex items-center space-x-4"
+        >
+          {/* Pulsing live badge */}
+          <span className="flex items-center text-sm font-medium text-blue-700 bg-blue-50 px-4 py-1.5 rounded-full border border-blue-200 shadow-sm">
+            <span className="relative flex h-2.5 w-2.5 mr-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500"></span>
+            </span>
+            Live Monitoring
+          </span>
+        </motion.div>
+      </motion.header>
+      
+      {/* Main content area */}
+      <main className="flex-1 max-w-7xl w-full mx-auto p-6 md:p-8">
+        <Dashboard />
+      </main>
+    </div>
+  )
+}
+
+export default App
