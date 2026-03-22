@@ -71,8 +71,15 @@ const Dashboard = () => {
     );
   }
 
-  // Standardized Data Mapping for Charts
-  const hourlyData = globalStats?.hourly_distribution || [];
+  // Robust Type-Safe Data Mapping for Charts (Fixes n.slice crash from stale remote API dicts)
+  const rawHourly = globalStats?.hourly_distribution;
+  const hourlyData = Array.isArray(rawHourly) 
+    ? rawHourly 
+    : (rawHourly ? Object.keys(rawHourly).map(hour => ({
+        hour: `${hour}:00`,
+        focus: Math.round((rawHourly[hour] || 0) * 0.6), 
+        distraction: Math.round((rawHourly[hour] || 0) * 0.4)
+      })) : []);
 
   const topDistractions = globalStats?.top_distractions ? 
     Object.keys(globalStats.top_distractions).map(site => ({
@@ -80,7 +87,8 @@ const Dashboard = () => {
       minutes: globalStats.top_distractions[site]
     })) : [];
 
-  const regressionPredictions = globalStats?.regression_predictions || [];
+  const rawReg = globalStats?.regression_predictions;
+  const regressionPredictions = Array.isArray(rawReg) ? rawReg : [];
 
   const productivityScore = Math.round((userProfile?.productivity_score || 0) * 100);
 
