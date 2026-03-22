@@ -70,7 +70,8 @@ def clean_old_records(keep_limit=5000):
 
 def trigger_model_training():
     try:
-        response = requests.post("http://localhost:5000/api/ai/train", timeout=20)
+        # Directly target the FastAPI microservice instead of the Express backend hop
+        response = requests.post("http://localhost:8000/train", timeout=20)
         print(f"Model Training Triggered. Response Status: {response.status_code}")
         print(f"Details: {response.json()}")
     except Exception as e:

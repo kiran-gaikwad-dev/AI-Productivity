@@ -6,3 +6,4 @@ pymongo
 numpy
 python-dotenv
 requests
+joblib

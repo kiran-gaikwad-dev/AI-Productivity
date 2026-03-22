@@ -26,8 +26,8 @@ app.add_middleware(
 
 @app.post("/train")
 def train_models():
-    # Fetch all logs
-    raw_data = list(activity_logs.find({}, {"_id": 0}))
+    # Fetch recent logs for training to avoid OOM for a scalable system
+    raw_data = list(activity_logs.find({}, {"_id": 0}).sort("timestamp", -1).limit(10000))
     if not raw_data:
         return {"message": "No data available"}
         
@@ -40,8 +40,8 @@ def train_models():
 
 @app.get("/predict/{user_id}")
 def user_prediction(user_id: str):
-    # Fetch user data
-    raw_data = list(activity_logs.find({"user_id": user_id}, {"_id": 0}))
+    # Fetch recent user data
+    raw_data = list(activity_logs.find({"user_id": user_id}, {"_id": 0}).sort("timestamp", -1).limit(500))
     if not raw_data:
         return {"error": "User not found or no data"}
         
@@ -75,7 +75,8 @@ def user_prediction(user_id: str):
 
 @app.get("/stats/global")
 def get_global_stats():
-    raw_data = list(activity_logs.find({}, {"_id": 0}))
+    # Fetch recent global logs for aggregate statistics
+    raw_data = list(activity_logs.find({}, {"_id": 0}).sort("timestamp", -1).limit(10000))
     if not raw_data:
          return {"score": 0}
     df = preprocessing.preprocess_data(raw_data)
