@@ -8,9 +8,9 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Dashboard = () => {
-  const [globalStats, setGlobalStats] = useState(null);
-  const [userProfile, setUserProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [globalStats, setGlobalStats] = useState(() => JSON.parse(localStorage.getItem('ai_globalStats')) || null);
+  const [userProfile, setUserProfile] = useState(() => JSON.parse(localStorage.getItem('ai_userProfile')) || null);
+  const [loading, setLoading] = useState(!localStorage.getItem('ai_globalStats'));
 
   const DEMO_USER_ID = "U102";
 
@@ -22,6 +22,10 @@ const Dashboard = () => {
         
         setGlobalStats(statsRes.data);
         setUserProfile(userRes.data);
+        
+        // Silently persist beautiful data instantly for future sessions
+        localStorage.setItem('ai_globalStats', JSON.stringify(statsRes.data));
+        localStorage.setItem('ai_userProfile', JSON.stringify(userRes.data));
       } catch (error) {
         console.error("Error fetching data", error);
       } finally {
