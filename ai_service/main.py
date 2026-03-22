@@ -113,21 +113,35 @@ def user_prediction(user_id: str):
 
 @app.get("/stats/global")
 def get_global_stats():
-    # Fetch recent global logs for aggregate statistics
-    raw_data = list(activity_logs.find({}, {"_id": 0}).sort("timestamp", -1).limit(10000))
-    if not raw_data:
-         return {"score": 0}
-    df = preprocessing.preprocess_data(raw_data)
-    score = models.calculate_productivity_score(df)
-    
-    # calculate by hour
-    hour_dist = df.groupby('hour_of_day')['duration'].sum().to_dict()
-    
-    # Top distracting sites
-    distracting = df[df['is_distracting'] == 1].groupby('website')['duration'].sum().sort_values(ascending=False).head(5).to_dict()
-    
-    return {
-        "overall_productivity_score": score,
-        "hourly_distribution": hour_dist,
-        "top_distractions": distracting
-    }
+    try:
+        # Fetch recent global logs for aggregate statistics
+        raw_data = list(activity_logs.find({}, {"_id": 0}).sort("timestamp", -1).limit(10000))
+        if not raw_data:
+            return {"message": "No data available"}
+            
+        df = preprocessing.preprocess_data(raw_data)
+        
+        # Calculate exactly how many minutes are pure focus vs distractions
+        total_time = df['duration'].sum()
+        productive_time = df[df['is_distracting'] == 0]['duration'].sum()
+        distraction_time = total_time - productive_time
+        
+        overall_score = productive_time / total_time if total_time > 0 else 0
+        
+        # Top distractions explicitly
+        distraction_df = df[df['is_distracting'] == 1]
+        top_distractions = distraction_df.groupby('website')['duration'].sum().sort_values(ascending=False).head(5).to_dict()
+        
+        # Group by hour
+        hourly_dist = df.groupby('hour_of_day')['duration'].sum().to_dict()
+        
+        return {
+            "total_minutes": float(total_time),
+            "focus_minutes": float(productive_time),
+            "distraction_minutes": float(distraction_time),
+            "overall_productivity_score": float(overall_score),
+            "top_distractions": top_distractions,
+            "hourly_distribution": hourly_dist
+        }
+    except Exception as e:
+        return {"error": str(e)}

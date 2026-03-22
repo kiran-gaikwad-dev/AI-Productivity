@@ -117,73 +117,78 @@ const Dashboard = () => {
         <h2 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">Overview Dashboard</h2>
       </motion.div>
 
-      {/* METRIC CARDS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+      {/* Overview Metric Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
-        {/* Card 1: Score */}
+        {/* Card 1: Main Score */}
         <motion.div 
           variants={itemVariants}
-          whileHover={{ y: -4, boxShadow: "0 20px 40px -15px rgba(59, 130, 246, 0.15)" }}
-          className="bg-white rounded-2xl sm:rounded-[1.25rem] shadow-sm hover:shadow-md p-5 sm:p-6 border border-slate-200/60 flex flex-col justify-between overflow-hidden relative group transition-all duration-300"
+          whileHover={{ y: -5, boxShadow: "0 25px 50px -12px rgba(59, 130, 246, 0.15)" }}
+          className="bg-white/60 backdrop-blur-xl rounded-2xl shadow-sm hover:shadow-lg p-6 border border-white flex flex-col justify-between overflow-hidden relative group transition-all duration-300 ring-1 ring-slate-900/5"
         >
-          <div className="absolute -right-6 -top-6 w-24 h-24 sm:w-32 sm:h-32 bg-blue-50 rounded-full blur-2xl group-hover:bg-blue-100 transition-colors duration-500"></div>
+          <div className="absolute -right-8 -top-8 w-32 h-32 bg-gradient-to-br from-blue-400/20 to-indigo-400/20 rounded-full blur-2xl group-hover:bg-blue-400/30 transition-colors"></div>
           
-          <div className="flex items-start justify-between relative z-10 mb-3 sm:mb-4">
-            <div className="p-2.5 sm:p-3 bg-blue-50 text-blue-600 rounded-xl">
-              <TrendingUp size={20} className="sm:w-6 sm:h-6" />
+          <div className="flex items-start justify-between relative z-10 mb-4">
+            <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-50 text-blue-600 rounded-xl shadow-inner ring-1 ring-blue-500/10">
+              <TrendingUp size={24} />
             </div>
-            <span className="flex items-center text-[10px] sm:text-xs font-bold text-emerald-600 bg-emerald-50 px-2 sm:px-2.5 py-1 rounded-full border border-emerald-100">
-              +12% <TrendingUp size={10} className="ml-1 sm:w-3 sm:h-3" />
+            <span className="flex items-center text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
+              Live Tracker <Activity size={12} className="ml-1 animate-pulse" />
             </span>
           </div>
           <div className="relative z-10">
-            <h3 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 mb-1">
-              <span className="bg-clip-text text-transparent bg-gradient-to-br from-blue-700 to-indigo-700">{productivityScore}%</span>
+            <h3 className="text-4xl font-black tracking-tight text-slate-900 bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-700">
+              {productivityScore}%
             </h3>
-            <p className="text-xs sm:text-sm font-medium text-slate-500">Your Productivity Score</p>
+            <p className="text-sm font-medium text-slate-500 mt-1">AI Productivity Score</p>
           </div>
         </motion.div>
 
-        {/* Card 2: Persona */}
+        {/* Card 2: Real Work (Focus Time) */}
         <motion.div 
           variants={itemVariants}
-          whileHover={{ y: -4, boxShadow: "0 20px 40px -15px rgba(99, 102, 241, 0.15)" }}
-          className="bg-white rounded-2xl sm:rounded-[1.25rem] shadow-sm hover:shadow-md p-5 sm:p-6 border border-slate-200/60 flex flex-col justify-between overflow-hidden relative group transition-all duration-300"
+          whileHover={{ y: -5, boxShadow: "0 25px 50px -12px rgba(16, 185, 129, 0.15)" }}
+          className="bg-white/60 backdrop-blur-xl rounded-2xl shadow-sm hover:shadow-lg p-6 border border-white flex flex-col justify-between overflow-hidden relative group transition-all duration-300 ring-1 ring-slate-900/5"
         >
-          <div className="absolute -right-6 -top-6 w-24 h-24 sm:w-32 sm:h-32 bg-indigo-50 rounded-full blur-2xl group-hover:bg-indigo-100 transition-colors duration-500"></div>
-          <div className="flex items-start justify-between relative z-10 mb-3 sm:mb-4">
-            <div className="p-2.5 sm:p-3 bg-indigo-50 text-indigo-600 rounded-xl">
-              <User size={20} className="sm:w-6 sm:h-6" />
+          <div className="absolute -right-8 -top-8 w-32 h-32 bg-gradient-to-br from-emerald-400/20 to-teal-400/20 rounded-full blur-2xl group-hover:bg-emerald-400/30 transition-colors"></div>
+          
+          <div className="flex items-start justify-between relative z-10 mb-4">
+            <div className="p-3 bg-gradient-to-br from-emerald-100 to-emerald-50 text-emerald-600 rounded-xl shadow-inner ring-1 ring-emerald-500/10">
+              <BrainCircuit size={24} />
             </div>
-            <span className="flex items-center text-[10px] sm:text-xs font-bold text-indigo-600 bg-indigo-50/50 px-2 sm:px-2.5 py-1 rounded-full border border-indigo-100">
-              AI Synced <Zap size={10} className="ml-1 fill-current" />
+            <span className="flex items-center text-xs font-semibold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full border border-emerald-200">
+              Real Work
             </span>
           </div>
           <div className="relative z-10">
-            <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 line-clamp-1 mb-1 sm:mb-2">
-              {userProfile?.cluster_profile || "Analyzing..."}
+            <h3 className="text-3xl font-black tracking-tight text-slate-900 border-l-4 border-emerald-500 pl-3">
+              {globalStats?.focus_minutes ? Math.floor(globalStats.focus_minutes / 60) : 0}h {globalStats?.focus_minutes ? Math.round(globalStats.focus_minutes % 60) : 0}m
             </h3>
-            <p className="text-xs sm:text-sm font-medium text-slate-500">ML Identified Persona</p>
+            <p className="text-sm font-semibold text-slate-600 mt-1">Total Focused Time</p>
           </div>
         </motion.div>
 
-        {/* Card 3: Global */}
+        {/* Card 3: Distractions & Mobile Doomscrolling */}
         <motion.div 
           variants={itemVariants}
-          whileHover={{ y: -4, boxShadow: "0 20px 40px -15px rgba(249, 115, 22, 0.15)" }}
-          className="bg-white rounded-2xl sm:rounded-[1.25rem] shadow-sm hover:shadow-md p-5 sm:p-6 border border-slate-200/60 flex flex-col justify-between overflow-hidden relative group transition-all duration-300"
+          whileHover={{ y: -5, boxShadow: "0 25px 50px -12px rgba(244, 63, 94, 0.15)" }}
+          className="bg-white/60 backdrop-blur-xl rounded-2xl shadow-sm hover:shadow-lg p-6 border border-white flex flex-col justify-between overflow-hidden relative group transition-all duration-300 ring-1 ring-slate-900/5"
         >
-          <div className="absolute -right-6 -top-6 w-24 h-24 sm:w-32 sm:h-32 bg-orange-50 rounded-full blur-2xl group-hover:bg-orange-100 transition-colors duration-500"></div>
-          <div className="flex items-start justify-between relative z-10 mb-3 sm:mb-4">
-            <div className="p-2.5 sm:p-3 bg-orange-50 text-orange-600 rounded-xl">
-              <BrainCircuit size={20} className="sm:w-6 sm:h-6" />
+          <div className="absolute -right-8 -top-8 w-32 h-32 bg-gradient-to-br from-rose-400/20 to-pink-400/20 rounded-full blur-2xl group-hover:bg-rose-400/30 transition-colors"></div>
+          
+          <div className="flex items-start justify-between relative z-10 mb-4">
+            <div className="p-3 bg-gradient-to-br from-rose-100 to-rose-50 text-rose-600 rounded-xl shadow-inner ring-1 ring-rose-500/10">
+              <AlertTriangle size={24} />
             </div>
+            <span className="flex items-center text-xs font-semibold text-rose-700 bg-rose-100 px-2.5 py-1 rounded-full border border-rose-200">
+              Distracted <User size={12} className="ml-1 fill-current" />
+            </span>
           </div>
           <div className="relative z-10">
-            <h3 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 mb-1">
-              {Math.round((globalStats?.overall_productivity_score || 0) * 100)}%
+            <h3 className="text-3xl font-black tracking-tight text-slate-900 border-l-4 border-rose-500 pl-3">
+              {globalStats?.distraction_minutes ? Math.floor(globalStats.distraction_minutes / 60) : 0}h {globalStats?.distraction_minutes ? Math.round(globalStats.distraction_minutes % 60) : 0}m
             </h3>
-            <p className="text-xs sm:text-sm font-medium text-slate-500">Global Average Score</p>
+            <p className="text-sm font-semibold text-slate-600 mt-1">Mobile Doomscrolling & Distractions</p>
           </div>
         </motion.div>
       </div>

@@ -15,8 +15,9 @@ db = client["ai_productivity"]
 activity_cols = db["activity_logs"]
 
 USERS = [f"U{i}" for i in range(101, 150)]
-WEBSITES = ["youtube", "github", "stackoverflow", "instagram", "netflix", "gmail", "docs", "vscode", "twitter", "linkedin"]
-DEVICES = ["mobile", "laptop", "tablet"]
+SITES = ['GitHub', 'VS Code', 'Google Docs', 'StackOverflow', 'Figma', 'Slack', 'Jira', 'LinkedIn']
+DISTRACTING_APPS = ['Instagram', 'TikTok', 'YouTube', 'Netflix', 'Twitter (X)', 'WhatsApp Chats', 'Snapchat', 'Reddit']
+ALL_DEVICES = ['mobile', 'laptop', 'tablet']
 
 def generate_activity_batch(batch_size=1000):
     batch = []
@@ -32,25 +33,41 @@ def generate_activity_batch(batch_size=1000):
         simulated_time = simulated_time.replace(hour=random_hour, minute=random_minute)
         
         # User behavior variation
-        user = random.choice(USERS)
-        site = random.choice(WEBSITES)
+        user_id = random.choice(USERS) # Changed user to user_id
+
+        # Weight towards mobile apps for typical distraction behaviors
+        is_distracting = random.random() < 0.4
         
-        # If site is distracting (e.g. youtube, netflix, instagram at late night) -> higher duration
-        is_night = random_hour >= 20 or random_hour <= 4
-        is_distracting = site in ['youtube', 'instagram', 'netflix', 'twitter']
-        
-        duration = random.randint(10, 120) if is_distracting else random.randint(5, 60)
-        if is_night and is_distracting:
-            duration += random.randint(30, 90) # Night binges
+        if is_distracting:
+            site = random.choice(DISTRACTING_APPS)
+            # Guarantee mobile device for TikTok, Instagram, Snapchat
+            if site in ['TikTok', 'Instagram', 'Snapchat', 'WhatsApp Chats']:
+                deviceType = 'mobile'
+            else:
+                deviceType = random.choices(ALL_DEVICES, weights=[0.6, 0.3, 0.1])[0]
+        else:
+            site = random.choice(SITES)
+            deviceType = random.choices(ALL_DEVICES, weights=[0.1, 0.8, 0.1])[0] # Work is usually laptop
             
+        # Give mobile doom-scrolling realistic durations (long periods of short clips)
+        if deviceType == 'mobile' and is_distracting:
+            duration = random.randint(15, 120) 
+            tab_switches = random.randint(30, 150) # High erratic switching on mobile
+            notifications = random.randint(5, 40)
+        else:
+            duration = random.randint(5, 60)
+            tab_switches = random.randint(0, 15)
+            notifications = random.randint(0, 5)
+
         activity = {
-            "user_id": user,
+            "user_id": user_id,
             "website": site,
-            "duration": duration, # in minutes
+            "duration": duration,
+            "is_distracting": 1 if is_distracting else 0,
             "timestamp": simulated_time.isoformat(),
-            "device": random.choice(DEVICES),
-            "notifications": random.randint(0, 30) if is_distracting else random.randint(0, 5),
-            "tab_switches": random.randint(0, 60) if is_distracting else random.randint(0, 15)
+            "device": deviceType,
+            "notifications": notifications,
+            "tab_switches": tab_switches
         }
         batch.append(activity)
     
