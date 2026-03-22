@@ -87,32 +87,31 @@ def clean_old_records(keep_limit=5000):
 
 def trigger_model_training():
     try:
-        # Target the production hosted AI microservice
-        response = requests.post("https://ai-productivity-1.onrender.com/train", timeout=20)
+        # Target the specifically deployed production hosted AI microservice
+        response = requests.post("https://ai-productivity-u5fw.onrender.com/train", timeout=60)
         print(f"Model Training Triggered. Response Status: {response.status_code}")
         print(f"Details: {response.json()}")
     except Exception as e:
         print(f"Error triggering training: {e}")
 
 def main():
-    print("Starting Advanced Batch Synthetic Data Generator...")
-    while True:
-        print("\n--- Starting next data generation cycle ---")
-        # 1. Generate 1000 records
-        batch = generate_activity_batch(1000)
-        
-        # 2. Insert payload into MongoDB
-        activity_cols.insert_many(batch)
-        print("Successfully generated and inserted 1000 real-world simulated records.")
-        
-        # 3. Apply rolling window (remove old records)
-        clean_old_records(keep_limit=5000)
-        
-        # 4. Trigger Model Retraining with fresh batch
-        trigger_model_training()
-        
-        print("Cycle complete. Waiting 60 seconds before next batch...")
-        time.sleep(60)
+    print("Starting Advanced Batch Synthetic Data Generator Burst...")
+    print("\n--- Starting precise data generation cycle ---")
+    
+    # 1. Generate 1000 records
+    batch = generate_activity_batch(1000)
+    
+    # 2. Insert payload into MongoDB
+    activity_cols.insert_many(batch)
+    print("Successfully generated and inserted 1000 real-world simulated records.")
+    
+    # 3. Apply rolling window (remove old records)
+    clean_old_records(keep_limit=5000)
+    
+    # 4. Trigger Model Retraining with fresh batch
+    trigger_model_training()
+    
+    print("One-shot Data Burst Complete! Your Model is now trained on the absolutely newest metrics.")
 
 if __name__ == "__main__":
     main()
