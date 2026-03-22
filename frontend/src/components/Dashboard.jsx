@@ -11,7 +11,6 @@ const Dashboard = () => {
   const [globalStats, setGlobalStats] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [loading, setLoading] = useState(true);
 
   const DEMO_USER_ID = "U102";
 
