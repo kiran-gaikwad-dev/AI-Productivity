@@ -18,8 +18,8 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const statsRes = await axios.get('http://localhost:5000/api/ai/stats/global');
-        const userRes = await axios.get(`http://localhost:5000/api/ai/predict/${DEMO_USER_ID}`);
+        const statsRes = await axios.get('https://ai-productivity-u5fw.onrender.com/api/ai/stats/global');
+        const userRes = await axios.get(`https://ai-productivity-u5fw.onrender.com/api/ai/predict/${DEMO_USER_ID}`);
         
         setGlobalStats(statsRes.data);
         setUserProfile(userRes.data);

@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 
-const AI_SERVICE_URL = 'http://127.0.0.1:8000';
+const AI_SERVICE_URL = 'https://ai-productivity-1.onrender.com';
 
 // Trigger model training route
 router.post('/train', async (req, res) => {
