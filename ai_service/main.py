@@ -8,6 +8,7 @@ import models
 import data_generator
 import pandas as pd
 from datetime import datetime, timedelta
+from typing import Optional
 
 load_dotenv()
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
@@ -120,7 +121,7 @@ def user_prediction(user_id: str):
     }
 
 @app.get("/stats/global")
-def get_global_stats(period: str = "week", start: str = None, end: str = None):
+def get_global_stats(period: str = "week", start: Optional[str] = None, end: Optional[str] = None):
     try:
         query = {}
         now = datetime.utcnow()
