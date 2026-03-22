@@ -7,6 +7,7 @@ import preprocessing
 import models
 import data_generator
 import pandas as pd
+from datetime import datetime, timedelta
 
 load_dotenv()
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
@@ -119,10 +120,24 @@ def user_prediction(user_id: str):
     }
 
 @app.get("/stats/global")
-def get_global_stats():
+def get_global_stats(period: str = "week", start: str = None, end: str = None):
     try:
-        # Fetch recent global logs for aggregate statistics
-        raw_data = list(activity_logs.find({}, {"_id": 0}).sort("timestamp", -1).limit(10000))
+        query = {}
+        now = datetime.utcnow()
+        if period == "day":
+            query["timestamp"] = {"$gte": now - timedelta(days=1)}
+        elif period == "week":
+            query["timestamp"] = {"$gte": now - timedelta(days=7)}
+        elif period == "custom" and start and end:
+            try:
+                start_date = datetime.strptime(start, "%Y-%m-%d")
+                end_date = datetime.strptime(end, "%Y-%m-%d") + timedelta(days=1)
+                query["timestamp"] = {"$gte": start_date, "$lt": end_date}
+            except Exception:
+                pass
+
+        # Fetch recent global logs for aggregate statistics scoped to UI timeframe
+        raw_data = list(activity_logs.find(query, {"_id": 0}).sort("timestamp", -1).limit(10000))
         if not raw_data:
             return {"message": "No data available"}
             

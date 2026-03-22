@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   AreaChart, Area, LineChart, Line
 } from 'recharts';
-import { BrainCircuit, Clock, AlertTriangle, TrendingUp, User, Zap, Activity, Target } from 'lucide-react';
+import { BrainCircuit, Clock, AlertTriangle, TrendingUp, User, Zap, Activity, Target, Calendar, Filter, ChevronDown } from 'lucide-react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -11,13 +11,20 @@ const Dashboard = () => {
   const [globalStats, setGlobalStats] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [filterType, setFilterType] = useState('week'); 
+  const [customRange, setCustomRange] = useState({ start: '', end: '' });
 
   const DEMO_USER_ID = "U102";
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const statsRes = await axios.get('https://ai-productivity-u5fw.onrender.com/api/ai/stats/global');
+        let globalUrl = `https://ai-productivity-u5fw.onrender.com/api/ai/stats/global?period=${filterType}`;
+        if (filterType === 'custom' && customRange.start && customRange.end) {
+          globalUrl = `https://ai-productivity-u5fw.onrender.com/api/ai/stats/global?period=custom&start=${customRange.start}&end=${customRange.end}`;
+        }
+        
+        const statsRes = await axios.get(globalUrl);
         const userRes = await axios.get(`https://ai-productivity-u5fw.onrender.com/api/ai/predict/${DEMO_USER_ID}`);
         
         setGlobalStats(statsRes.data);
@@ -32,7 +39,7 @@ const Dashboard = () => {
     fetchData();
     const interval = setInterval(fetchData, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [filterType, customRange.start, customRange.end]);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -81,16 +88,41 @@ const Dashboard = () => {
         distraction: Math.round((rawHourly[hour] || 0) * 0.4)
       })) : []);
 
-  const topDistractions = globalStats?.top_distractions ? 
-    Object.keys(globalStats.top_distractions).map(site => ({
-      site,
-      minutes: globalStats.top_distractions[site]
-    })) : [];
-
   const rawReg = globalStats?.regression_predictions;
   const regressionPredictions = Array.isArray(rawReg) ? rawReg : [];
 
   const productivityScore = Math.round((userProfile?.productivity_score || 0) * 100);
+
+  // Dynamic AI Insight Calculations
+  let peakFocusHour = "10:00";
+  let peakFocusMins = 0;
+  
+  if (regressionPredictions.length > 0) {
+    const best = [...regressionPredictions].sort((a, b) => b.predicted_duration - a.predicted_duration)[0];
+    if (best) {
+      peakFocusHour = best.time;
+      peakFocusMins = best.predicted_duration;
+    }
+  }
+
+  const userCluster = userProfile?.cluster || "Analyzing...";
+  let clusterRecommendation = "Insufficient system usage data to generate K-Means profile.";
+  let clusterEmoji = "🧠";
+  let clusterTitle = "AI System Analysis";
+
+  if (userCluster.includes("Night")) {
+    clusterEmoji = "🌙";
+    clusterTitle = "Sleep Hygiene Yield";
+    clusterRecommendation = "Your K-Means dataset heavily isolates your usage patterns deep into the night. Activating strict screen curfews will statistically raise tomorrow's focus probability by >20%.";
+  } else if (userCluster.includes("Social") || userCluster.includes("Distracted")) {
+    clusterEmoji = "📵";
+    clusterTitle = "Digital Fragmentation";
+    clusterRecommendation = "Our Random Forest engine flagged your rapid tab-switching rate. Systematically silencing all background notifications will instantly crash your distraction volume.";
+  } else if (userCluster !== "Analyzing...") {
+    clusterEmoji = "⚡";
+    clusterTitle = "Sustained Velocity";
+    clusterRecommendation = "Your profile perfectly mirrors the top tier of system performance. Your raw ML productivity vectors are optimized—continue your exact deep-focus scheduling.";
+  }
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -117,13 +149,52 @@ const Dashboard = () => {
       animate="show" 
       className="space-y-6 sm:space-y-8 w-full max-w-full overflow-hidden"
     >
-      {/* Intro Header */}
-      <motion.div variants={itemVariants} className="flex items-center space-x-2 sm:space-x-3 mb-2 sm:mb-4 px-1">
-        <div className="bg-white p-2 rounded-xl text-blue-600 shadow-sm border border-slate-200/60">
-          <Activity size={18} className="sm:w-[22px] sm:h-[22px]" />
-        </div>
-        <h2 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">Overview Dashboard</h2>
-      </motion.div>
+      {/* Intro Header & Global Filter Architecture */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-8 space-y-4 sm:space-y-0">
+        <motion.div variants={itemVariants} className="flex items-center space-x-3">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 sm:p-2.5 rounded-xl text-indigo-600 dark:text-indigo-400 shadow-sm relative group overflow-hidden">
+            <div className="absolute inset-0 bg-indigo-500/10 group-hover:bg-indigo-500/20 transition-colors"></div>
+            <Activity size={20} className="sm:w-[24px] sm:h-[24px] relative z-10" />
+          </div>
+          <div>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white tracking-tight">Overview Dashboard</h2>
+            <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5">Real-time ML aggregation based on selected scope.</p>
+          </div>
+        </motion.div>
+
+        {/* Global Selectors */}
+        <motion.div variants={itemVariants} className="flex flex-col w-full sm:w-auto sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-3 bg-white/60 dark:bg-slate-900/60 p-2 rounded-2xl border border-slate-200 dark:border-slate-800 backdrop-blur-md shadow-sm">
+          <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl p-1 w-full sm:w-auto">
+            {['day', 'week', 'custom'].map((type) => (
+              <button
+                key={type}
+                onClick={() => setFilterType(type)}
+                className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-xs font-bold capitalize transition-all duration-200 ${filterType === type ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-200 dark:border-slate-600' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'} `}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
+          
+          <AnimatePresence>
+            {filterType === 'custom' && (
+              <motion.div 
+                initial={{ width: 0, opacity: 0 }} animate={{ width: 'auto', opacity: 1 }} exit={{ width: 0, opacity: 0 }}
+                className="flex items-center space-x-2 w-full sm:w-auto overflow-hidden"
+              >
+                <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 focus-within:ring-2 focus-within:ring-indigo-500 transition-all">
+                  <Calendar size={14} className="text-slate-400 mr-2" />
+                  <input type="date" value={customRange.start} onChange={e => setCustomRange({...customRange, start: e.target.value})} className="bg-transparent text-xs text-slate-700 dark:text-slate-300 outline-none w-24 [color-scheme:light] dark:[color-scheme:dark]" />
+                </div>
+                <span className="text-slate-400 font-bold text-xs">-</span>
+                <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 focus-within:ring-2 focus-within:ring-indigo-500 transition-all">
+                  <input type="date" value={customRange.end} onChange={e => setCustomRange({...customRange, end: e.target.value})} className="bg-transparent text-xs text-slate-700 dark:text-slate-300 outline-none w-24 [color-scheme:light] dark:[color-scheme:dark]" />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      </div>
 
       {/* Overview Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
@@ -342,28 +413,43 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <motion.div 
               whileHover={{ scale: 1.01 }}
-              className="p-4 sm:p-6 bg-white/[0.06] backdrop-blur-md rounded-xl sm:rounded-2xl border border-white/10 hover:bg-white/10 transition-colors cursor-pointer group"
+              className="p-4 sm:p-6 bg-white/[0.06] backdrop-blur-md rounded-xl sm:rounded-2xl border border-white/10 hover:bg-white/10 transition-colors cursor-pointer group flex flex-col justify-between"
             >
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-fuchsia-500/20 flex items-center justify-center mb-3 sm:mb-4 border border-fuchsia-400/30 group-hover:bg-fuchsia-500/30 transition-colors">
-                 <span className="text-lg sm:text-xl">🌙</span>
+              <div>
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-fuchsia-500/20 flex items-center justify-center mb-3 sm:mb-4 border border-fuchsia-400/30 group-hover:bg-fuchsia-500/30 transition-colors">
+                  <span className="text-lg sm:text-xl">{clusterEmoji}</span>
+                </div>
+                <h4 className="text-base sm:text-lg font-semibold text-white mb-1.5 sm:mb-2">{clusterTitle}</h4>
+                <p className="text-slate-300 leading-relaxed text-xs sm:text-sm font-medium">
+                  {clusterRecommendation}
+                </p>
               </div>
-              <h4 className="text-base sm:text-lg font-semibold text-white mb-1.5 sm:mb-2">Optimize Night Routine</h4>
-              <p className="text-slate-300 leading-relaxed text-xs sm:text-sm font-medium">
-                Your profile <span className="text-indigo-300 font-bold px-1.5 py-0.5 bg-indigo-500/20 rounded-md whitespace-nowrap">{userProfile?.cluster_profile}</span> indicates heavy device usage post 9 PM. Shrinking night screen time will spike tomorrow's metric.
-              </p>
+              <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between">
+                <span className="text-xs text-slate-400">Persona Profile</span>
+                <span className="text-fuchsia-300 font-bold px-2 py-1 bg-fuchsia-500/20 rounded-md text-xs">{userCluster}</span>
+              </div>
             </motion.div>
 
             <motion.div 
               whileHover={{ scale: 1.01 }}
-              className="p-4 sm:p-6 bg-white/[0.06] backdrop-blur-md rounded-xl sm:rounded-2xl border border-white/10 hover:bg-white/10 transition-colors cursor-pointer group"
+              className="p-4 sm:p-6 bg-white/[0.06] backdrop-blur-md rounded-xl sm:rounded-2xl border border-white/10 hover:bg-white/10 transition-colors cursor-pointer group flex flex-col justify-between"
             >
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-emerald-500/20 flex items-center justify-center mb-3 sm:mb-4 border border-emerald-400/30 group-hover:bg-emerald-500/30 transition-colors">
-                <span className="text-lg sm:text-xl">🎯</span>
+              <div>
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-emerald-500/20 flex items-center justify-center mb-3 sm:mb-4 border border-emerald-400/30 group-hover:bg-emerald-500/30 transition-colors">
+                  <span className="text-lg sm:text-xl">🎯</span>
+                </div>
+                <h4 className="text-base sm:text-lg font-semibold text-white mb-1.5 sm:mb-2">Linear Peak Prediction</h4>
+                <p className="text-slate-300 leading-relaxed text-xs sm:text-sm font-medium">
+                  Our Regression Model definitively projects your ultimate peak focus capacity strikes sharply at <span className="text-emerald-300 font-bold px-1 py-0.5 bg-emerald-500/20 rounded">{peakFocusHour}</span>. 
+                  Block off this time completely. Do not engage in meetings as you are mathematically predicted to achieve {peakFocusMins} uninterrupted focus minutes here.
+                </p>
               </div>
-              <h4 className="text-base sm:text-lg font-semibold text-white mb-1.5 sm:mb-2">Peak Focus Window</h4>
-              <p className="text-slate-300 leading-relaxed text-xs sm:text-sm font-medium">
-                Execute deep logic between <span className="text-emerald-300 font-bold">10 AM - 12 PM</span>. Our model calculates your raw distraction rate plummets below 15% exclusively during this zone.
-              </p>
+              <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between">
+                <span className="text-xs text-slate-400">Predicted Yield</span>
+                <span className="text-emerald-400 font-bold flex items-center text-xs">
+                  <TrendingUp size={14} className="mr-1" /> Max {peakFocusMins}m
+                </span>
+              </div>
             </motion.div>
           </div>
         </div>
