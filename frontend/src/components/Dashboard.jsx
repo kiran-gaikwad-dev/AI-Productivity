@@ -11,20 +11,14 @@ const Dashboard = () => {
   const [globalStats, setGlobalStats] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [filterType, setFilterType] = useState('week'); 
-  const [customRange, setCustomRange] = useState({ start: '', end: '' });
+  const [loading, setLoading] = useState(true);
 
   const DEMO_USER_ID = "U102";
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        let globalUrl = `https://ai-productivity-u5fw.onrender.com/api/ai/stats/global?period=${filterType}`;
-        if (filterType === 'custom' && customRange.start && customRange.end) {
-          globalUrl = `https://ai-productivity-u5fw.onrender.com/api/ai/stats/global?period=custom&start=${customRange.start}&end=${customRange.end}`;
-        }
-        
-        const statsRes = await axios.get(globalUrl);
+        const statsRes = await axios.get('https://ai-productivity-u5fw.onrender.com/api/ai/stats/global');
         const userRes = await axios.get(`https://ai-productivity-u5fw.onrender.com/api/ai/predict/${DEMO_USER_ID}`);
         
         setGlobalStats(statsRes.data);
@@ -39,7 +33,7 @@ const Dashboard = () => {
     fetchData();
     const interval = setInterval(fetchData, 5000);
     return () => clearInterval(interval);
-  }, [filterType, customRange.start, customRange.end]);
+  }, []);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -155,8 +149,8 @@ const Dashboard = () => {
       animate="show" 
       className="space-y-6 sm:space-y-8 w-full max-w-full overflow-hidden"
     >
-      {/* Intro Header & Global Filter Architecture */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-8 space-y-4 sm:space-y-0">
+      {/* Intro Header */}
+      <div className="flex flex-col sm:flex-row items-start justify-between mb-4 sm:mb-8">
         <motion.div variants={itemVariants} className="flex items-center space-x-3">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 sm:p-2.5 rounded-xl text-indigo-600 dark:text-indigo-400 shadow-sm relative group overflow-hidden">
             <div className="absolute inset-0 bg-indigo-500/10 group-hover:bg-indigo-500/20 transition-colors"></div>
@@ -164,41 +158,8 @@ const Dashboard = () => {
           </div>
           <div>
             <h2 className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white tracking-tight">Overview Dashboard</h2>
-            <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5">Real-time ML aggregation based on selected scope.</p>
+            <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5">Real-time ML aggregation showing precise daily averages.</p>
           </div>
-        </motion.div>
-
-        {/* Global Selectors */}
-        <motion.div variants={itemVariants} className="flex flex-col w-full sm:w-auto sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-3 bg-white/60 dark:bg-slate-900/60 p-2 rounded-2xl border border-slate-200 dark:border-slate-800 backdrop-blur-md shadow-sm">
-          <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl p-1 w-full sm:w-auto">
-            {['day', 'week', 'custom'].map((type) => (
-              <button
-                key={type}
-                onClick={() => setFilterType(type)}
-                className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-xs font-bold capitalize transition-all duration-200 ${filterType === type ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-200 dark:border-slate-600' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'} `}
-              >
-                {type}
-              </button>
-            ))}
-          </div>
-          
-          <AnimatePresence>
-            {filterType === 'custom' && (
-              <motion.div 
-                initial={{ width: 0, opacity: 0 }} animate={{ width: 'auto', opacity: 1 }} exit={{ width: 0, opacity: 0 }}
-                className="flex items-center space-x-2 w-full sm:w-auto overflow-hidden"
-              >
-                <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 focus-within:ring-2 focus-within:ring-indigo-500 transition-all">
-                  <Calendar size={14} className="text-slate-400 mr-2" />
-                  <input type="date" value={customRange.start} onChange={e => setCustomRange({...customRange, start: e.target.value})} className="bg-transparent text-xs text-slate-700 dark:text-slate-300 outline-none w-24 [color-scheme:light] dark:[color-scheme:dark]" />
-                </div>
-                <span className="text-slate-400 font-bold text-xs">-</span>
-                <div className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 focus-within:ring-2 focus-within:ring-indigo-500 transition-all">
-                  <input type="date" value={customRange.end} onChange={e => setCustomRange({...customRange, end: e.target.value})} className="bg-transparent text-xs text-slate-700 dark:text-slate-300 outline-none w-24 [color-scheme:light] dark:[color-scheme:dark]" />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </motion.div>
       </div>
 
@@ -249,7 +210,7 @@ const Dashboard = () => {
             <h3 className="text-3xl font-black tracking-tight text-slate-900 border-l-4 border-emerald-500 pl-3">
               {globalStats?.focus_minutes ? Math.floor(globalStats.focus_minutes / 60) : 0}h {globalStats?.focus_minutes ? Math.round(globalStats.focus_minutes % 60) : 0}m
             </h3>
-            <p className="text-sm font-semibold text-slate-600 mt-1">Total Focused Time</p>
+            <p className="text-sm font-semibold text-slate-600 mt-1">Daily Average Focus</p>
           </div>
         </motion.div>
 
@@ -273,7 +234,7 @@ const Dashboard = () => {
             <h3 className="text-3xl font-black tracking-tight text-slate-900 border-l-4 border-rose-500 pl-3">
               {globalStats?.distraction_minutes ? Math.floor(globalStats.distraction_minutes / 60) : 0}h {globalStats?.distraction_minutes ? Math.round(globalStats.distraction_minutes % 60) : 0}m
             </h3>
-            <p className="text-sm font-semibold text-slate-600 mt-1">Mobile Doomscrolling</p>
+            <p className="text-sm font-semibold text-slate-600 mt-1">Daily Avg Distraction</p>
           </div>
         </motion.div>
       </div>

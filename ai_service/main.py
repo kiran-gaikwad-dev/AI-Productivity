@@ -121,24 +121,10 @@ def user_prediction(user_id: str):
     }
 
 @app.get("/stats/global")
-def get_global_stats(period: str = "week", start: Optional[str] = None, end: Optional[str] = None):
+def get_global_stats():
     try:
-        query = {}
-        now = datetime.utcnow()
-        if period == "day":
-            query["timestamp"] = {"$gte": now - timedelta(days=1)}
-        elif period == "week":
-            query["timestamp"] = {"$gte": now - timedelta(days=7)}
-        elif period == "custom" and start and end:
-            try:
-                start_date = datetime.strptime(start, "%Y-%m-%d")
-                end_date = datetime.strptime(end, "%Y-%m-%d") + timedelta(days=1)
-                query["timestamp"] = {"$gte": start_date, "$lt": end_date}
-            except Exception:
-                pass
-
-        # Fetch recent global logs for aggregate statistics scoped to UI timeframe
-        raw_data = list(activity_logs.find(query, {"_id": 0}).sort("timestamp", -1).limit(10000))
+        # Fetch ALL recent global logs unconditionally (Prevents 0 0 0 if data isn't perfectly fresh today)
+        raw_data = list(activity_logs.find({}, {"_id": 0}).sort("timestamp", -1).limit(10000))
         if not raw_data:
             return {"message": "No data available"}
             
@@ -193,9 +179,9 @@ def get_global_stats(period: str = "week", start: Optional[str] = None, end: Opt
             })
         
         return {
-            "total_minutes": float(total_time),
-            "focus_minutes": float(productive_time),
-            "distraction_minutes": float(distraction_time),
+            "total_minutes": float(total_time) / divisor,
+            "focus_minutes": float(productive_time) / divisor,
+            "distraction_minutes": float(distraction_time) / divisor,
             "overall_productivity_score": float(overall_score),
             "top_distractions": top_distractions,
             "hourly_distribution": hourly_dist,
