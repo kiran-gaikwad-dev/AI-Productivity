@@ -21,7 +21,7 @@ function App() {
             <div className="w-3 h-3 bg-white rounded-full" />
           </motion.div>
           <h1 className="text-lg sm:text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 tracking-tight text-center sm:text-left">
-            AI Productivity Analyzer
+            System Usage Analytics Platform
           </h1>
         </div>
         

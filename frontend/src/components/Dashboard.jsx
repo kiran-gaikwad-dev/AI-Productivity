@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  AreaChart, Area
+  AreaChart, Area, LineChart, Line
 } from 'recharts';
-import { BrainCircuit, Clock, AlertTriangle, TrendingUp, User, Zap, Activity } from 'lucide-react';
+import { BrainCircuit, Clock, AlertTriangle, TrendingUp, User, Zap, Activity, Target } from 'lucide-react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -71,17 +71,16 @@ const Dashboard = () => {
     );
   }
 
-  const hourlyData = globalStats?.hourly_distribution ? 
-    Object.keys(globalStats.hourly_distribution).map(hour => ({
-      hour: `${hour}:00`,
-      minutes: globalStats.hourly_distribution[hour]
-    })) : [];
+  // Standardized Data Mapping for Charts
+  const hourlyData = globalStats?.hourly_distribution || [];
 
   const topDistractions = globalStats?.top_distractions ? 
     Object.keys(globalStats.top_distractions).map(site => ({
       site,
       minutes: globalStats.top_distractions[site]
     })) : [];
+
+  const regressionPredictions = globalStats?.regression_predictions || [];
 
   const productivityScore = Math.round((userProfile?.productivity_score || 0) * 100);
 
@@ -94,7 +93,7 @@ const Dashboard = () => {
             <div key={index} className="flex items-center space-x-2 text-xs sm:text-sm text-slate-600">
               <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full shadow-sm" style={{ backgroundColor: entry.color }}></span>
               <span className="font-semibold text-slate-900">{entry.value}</span> 
-              <span>minutes</span>
+              <span>minutes {entry.name === 'focus' ? 'Focused' : 'Distracted'}</span>
             </div>
           ))}
         </div>
@@ -110,6 +109,7 @@ const Dashboard = () => {
       animate="show" 
       className="space-y-6 sm:space-y-8 w-full max-w-full overflow-hidden"
     >
+      {/* Intro Header */}
       <motion.div variants={itemVariants} className="flex items-center space-x-2 sm:space-x-3 mb-2 sm:mb-4 px-1">
         <div className="bg-white p-2 rounded-xl text-blue-600 shadow-sm border border-slate-200/60">
           <Activity size={18} className="sm:w-[22px] sm:h-[22px]" />
@@ -118,7 +118,7 @@ const Dashboard = () => {
       </motion.div>
 
       {/* Overview Metric Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
         
         {/* Card 1: Main Score */}
         <motion.div 
@@ -132,7 +132,7 @@ const Dashboard = () => {
             <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-50 text-blue-600 rounded-xl shadow-inner ring-1 ring-blue-500/10">
               <TrendingUp size={24} />
             </div>
-            <span className="flex items-center text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
+            <span className="flex items-center text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
               Live Tracker <Activity size={12} className="ml-1 animate-pulse" />
             </span>
           </div>
@@ -188,7 +188,7 @@ const Dashboard = () => {
             <h3 className="text-3xl font-black tracking-tight text-slate-900 border-l-4 border-rose-500 pl-3">
               {globalStats?.distraction_minutes ? Math.floor(globalStats.distraction_minutes / 60) : 0}h {globalStats?.distraction_minutes ? Math.round(globalStats.distraction_minutes % 60) : 0}m
             </h3>
-            <p className="text-sm font-semibold text-slate-600 mt-1">Mobile Doomscrolling & Distractions</p>
+            <p className="text-sm font-semibold text-slate-600 mt-1">Mobile Doomscrolling</p>
           </div>
         </motion.div>
       </div>
@@ -197,22 +197,26 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
         
         {/* Heatmap Area Chart */}
-        <motion.div variants={itemVariants} className="bg-white rounded-2xl sm:rounded-[1.5rem] shadow-sm p-4 sm:p-6 md:p-8 border border-slate-200/60 flex flex-col w-full overflow-hidden">
+        <motion.div variants={itemVariants} className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-4 sm:p-6 md:p-8 border border-slate-100 transition-all duration-500 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] flex flex-col w-full overflow-hidden">
           <div className="flex items-center justify-between mb-6 sm:mb-8">
             <div className="flex items-center space-x-2 sm:space-x-3">
               <div className="p-2 sm:p-2.5 bg-slate-50 border border-slate-100 rounded-xl">
                 <Clock className="text-slate-600 w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <h3 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight">Activity Heatmap</h3>
+              <h3 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight">Average Usage (per Hour)</h3>
             </div>
           </div>
           <div className="h-64 sm:h-80 w-full bg-white relative">
             <ResponsiveContainer width="99%" height="100%">
               <AreaChart data={hourlyData} margin={{ top: 5, right: 0, bottom: 0, left: -25 }}>
                 <defs>
-                  <linearGradient id="colorMinutes" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#2563EB" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#2563EB" stopOpacity={0.01}/>
+                  <linearGradient id="colorFocus" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="#10B981" stopOpacity={0.01}/>
+                  </linearGradient>
+                  <linearGradient id="colorDistraction" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#F43F5E" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="#F43F5E" stopOpacity={0.01}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
@@ -221,12 +225,21 @@ const Dashboard = () => {
                 <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4' }} />
                 <Area 
                   type="monotone" 
-                  dataKey="minutes" 
-                  stroke="#2563EB" 
+                  dataKey="focus" 
+                  stroke="#10B981" 
                   strokeWidth={3} 
                   fillOpacity={1} 
-                  fill="url(#colorMinutes)" 
-                  activeDot={{r: 6, strokeWidth: 0, fill: '#1d4ed8', style: {filter: 'drop-shadow(0px 3px 5px rgba(37, 99, 235, 0.5))'}}} 
+                  fill="url(#colorFocus)" 
+                  activeDot={{r: 6, strokeWidth: 0, fill: '#059669', style: {filter: 'drop-shadow(0px 3px 5px rgba(16, 185, 129, 0.5))'}}} 
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="distraction" 
+                  stroke="#F43F5E" 
+                  strokeWidth={3} 
+                  fillOpacity={1} 
+                  fill="url(#colorDistraction)" 
+                  activeDot={{r: 6, strokeWidth: 0, fill: '#E11D48', style: {filter: 'drop-shadow(0px 3px 5px rgba(244, 63, 94, 0.5))'}}} 
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -234,16 +247,18 @@ const Dashboard = () => {
         </motion.div>
 
         {/* Distractions Bar Chart */}
-        <motion.div variants={itemVariants} className="bg-white rounded-2xl sm:rounded-[1.5rem] shadow-sm p-4 sm:p-6 md:p-8 border border-slate-200/60 flex flex-col w-full overflow-hidden">
-          <div className="flex items-center space-x-2 sm:space-x-3 mb-6 sm:mb-8">
-            <div className="p-2 sm:p-2.5 bg-rose-50 border border-rose-100 rounded-xl relative">
-              <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 sm:h-3 sm:w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 sm:h-3 sm:w-3 bg-rose-500 border-2 border-white"></span>
-              </span>
-              <AlertTriangle className="text-rose-500 w-4 h-4 sm:w-5 sm:h-5" />
+        <motion.div variants={itemVariants} className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-4 sm:p-6 md:p-8 border border-slate-100 transition-all duration-500 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] flex flex-col w-full overflow-hidden">
+          <div className="flex items-center justify-between mb-6 sm:mb-8">
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="p-2 sm:p-2.5 bg-rose-50 border border-rose-100 rounded-xl relative">
+                <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 sm:h-3 sm:w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 sm:h-3 sm:w-3 bg-rose-500 border-2 border-white"></span>
+                </span>
+                <AlertTriangle className="text-rose-500 w-4 h-4 sm:w-5 sm:h-5" />
+              </div>
+              <h3 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight">Time Drains (Averaged/Day)</h3>
             </div>
-            <h3 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight">Time Drains</h3>
           </div>
           <div className="h-64 sm:h-80 w-full relative">
             <ResponsiveContainer width="99%" height="100%">
@@ -267,6 +282,40 @@ const Dashboard = () => {
           </div>
         </motion.div>
       </div>
+
+      {/* LINEAR REGRESSION PREDICTION CHART */}
+      <motion.div variants={itemVariants} className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-4 sm:p-6 md:p-8 border border-slate-100 transition-all duration-500 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] flex flex-col w-full overflow-hidden mt-6 sm:mt-8">
+        <div className="flex items-center justify-between mb-6 sm:mb-8">
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <div className="p-2 sm:p-2.5 bg-violet-50 border border-violet-100 rounded-xl">
+              <Target className="text-violet-600 w-4 h-4 sm:w-5 sm:h-5" />
+            </div>
+            <h3 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight">AI Forecast: Predicted Focus Trend</h3>
+          </div>
+          <span className="flex items-center text-xs font-semibold text-violet-600 bg-violet-50 px-2.5 py-1 rounded-full border border-violet-200">
+            Linear Regression Engine <BrainCircuit size={12} className="ml-1 fill-current" />
+          </span>
+        </div>
+        <div className="h-64 sm:h-80 w-full relative">
+          <ResponsiveContainer width="99%" height="100%">
+            <LineChart data={regressionPredictions} margin={{ top: 5, right: 0, bottom: 0, left: -25 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+              <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11, fontWeight: 500}} dy={10} />
+              <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11, fontWeight: 500}} />
+              <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4' }} />
+              <Line 
+                type="monotone" 
+                dataKey="predicted_duration" 
+                name="focus"
+                stroke="#8B5CF6" 
+                strokeWidth={4} 
+                dot={false}
+                activeDot={{r: 6, strokeWidth: 0, fill: '#7C3AED', style: {filter: 'drop-shadow(0px 3px 5px rgba(139, 92, 246, 0.5))'}}} 
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </motion.div>
 
       {/* ACTIONABLE AI INSIGHTS CARD */}
       <motion.div variants={itemVariants} className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl sm:rounded-[1.5rem] shadow-xl overflow-hidden relative">

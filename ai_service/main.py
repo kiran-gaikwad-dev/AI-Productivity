@@ -65,16 +65,23 @@ app.add_middleware(
 @app.post("/train")
 def train_models():
     # Fetch recent logs for training to avoid OOM for a scalable system
-    raw_data = list(activity_logs.find({}, {"_id": 0}).sort("timestamp", -1).limit(10000))
-    if not raw_data:
-        return {"message": "No data available"}
+    try:
+        raw_data = list(activity_logs.find({}, {"_id": 0}).sort("timestamp", -1).limit(10000))
+        if not raw_data:
+            return {"message": "No data available"}
+            
+        df = preprocessing.preprocess_data(raw_data)
+        cluster_res = models.train_clustering(df)
+        class_res = models.train_classification(df)
+        reg_res = models.train_regression(df)
         
-    df = preprocessing.preprocess_data(raw_data)
-    
-    res_cluster = models.train_clustering(df)
-    res_class = models.train_classification(df)
-    
-    return {"clustering": res_cluster, "classification": res_class}
+        return {
+            "clustering": cluster_res, 
+            "classification": class_res,
+            "regression": reg_res
+        }
+    except Exception as e:
+        return {"error": str(e)}
 
 @app.get("/predict/{user_id}")
 def user_prediction(user_id: str):
@@ -121,19 +128,53 @@ def get_global_stats():
             
         df = preprocessing.preprocess_data(raw_data)
         
-        # Calculate exactly how many minutes are pure focus vs distractions
+        # Calculate aggregate total time correctly
         total_time = df['duration'].sum()
         productive_time = df[df['is_distracting'] == 0]['duration'].sum()
         distraction_time = total_time - productive_time
         
         overall_score = productive_time / total_time if total_time > 0 else 0
         
-        # Top distractions explicitly
-        distraction_df = df[df['is_distracting'] == 1]
-        top_distractions = distraction_df.groupby('website')['duration'].sum().sort_values(ascending=False).head(5).to_dict()
+        # Calculate scaling divisor to get perfectly realistic 24-hour human metrics
+        # (Total Hours) / (Unique Days * Unique Users) = Average Minutes per User per Day
+        num_days = df['timestamp'].dt.date.nunique()
+        num_users = df['user_id'].nunique()
+        divisor = num_days * num_users if (num_days * num_users) > 0 else 1
         
-        # Group by hour
-        hourly_dist = df.groupby('hour_of_day')['duration'].sum().to_dict()
+        # Top distractions explicitly (Average daily minutes per user)
+        distraction_df = df[df['is_distracting'] == 1]
+        top_distractions = (distraction_df.groupby('website')['duration'].sum() / divisor).sort_values(ascending=False).head(5).to_dict()
+        
+        # Segregate Focus vs Distraction by hour (Averaged per user per day)
+        hourly_dist = []
+        for hour in range(24):
+            hour_df = df[df['hour_of_day'] == hour]
+            f_time = hour_df[hour_df['is_distracting'] == 0]['duration'].sum() / divisor
+            d_time = hour_df[hour_df['is_distracting'] == 1]['duration'].sum() / divisor
+            hourly_dist.append({
+                "hour": f"{hour}:00",
+                "focus": round(f_time),
+                "distraction": round(d_time)
+            })
+        
+        # Generate 24-hour Focus predictions based on Linear Regression Model
+        regression_predictions = []
+        for hour in range(24):
+            # Evaluate expected focus time at this specific hour under base zero-distraction conditions
+            features = {
+                'hour_of_day': hour,
+                'tab_switch_rate': 0.0,
+                'notification_rate': 0.0,
+                'is_weekend': 0,
+                'device_laptop': 1,
+                'device_mobile': 0,
+                'device_tablet': 0
+            }
+            pred_dur = models.predict_focus_duration(features)
+            regression_predictions.append({
+                "time": f"{hour}:00",
+                "predicted_duration": round(pred_dur)
+            })
         
         return {
             "total_minutes": float(total_time),
@@ -141,7 +182,8 @@ def get_global_stats():
             "distraction_minutes": float(distraction_time),
             "overall_productivity_score": float(overall_score),
             "top_distractions": top_distractions,
-            "hourly_distribution": hourly_dist
+            "hourly_distribution": hourly_dist,
+            "regression_predictions": regression_predictions
         }
     except Exception as e:
         return {"error": str(e)}
