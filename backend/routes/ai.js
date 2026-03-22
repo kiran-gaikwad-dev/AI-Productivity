@@ -27,10 +27,13 @@ router.get('/predict/:user_id', async (req, res) => {
 // Get global stats
 router.get('/stats/global', async (req, res) => {
   try {
-    const response = await axios.get(`${AI_SERVICE_URL}/stats/global`);
+    const queryParams = new URLSearchParams(req.query).toString();
+    const finalUrl = queryParams ? `${AI_SERVICE_URL}/stats/global?${queryParams}` : `${AI_SERVICE_URL}/stats/global`;
+    
+    const response = await axios.get(finalUrl);
     res.json(response.data);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message, details: "Failed to fetch stats from AI Service" });
   }
 });
 
