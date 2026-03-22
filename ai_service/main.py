@@ -5,6 +5,7 @@ import os
 from dotenv import load_dotenv
 import preprocessing
 import models
+import data_generator
 import pandas as pd
 
 load_dotenv()
@@ -13,6 +14,43 @@ client = MongoClient(MONGO_URI)
 db = client["ai_productivity"]
 activity_logs = db["activity_logs"]
 users_col = db["users"]
+
+app = FastAPI(title="AI Productivity Service")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.post("/seed")
+def seed_database(background_tasks: BackgroundTasks):
+    """
+    Production-friendly endpoint to generate 1000 logs and retrain models.
+    Essential for Render deployment where data_generator.py can't loop infinitely.
+    """
+    # Generate simulated logs
+    batch = data_generator.generate_activity_batch(1000)
+    
+    # Insert safely into MongoDB
+    activity_logs.insert_many(batch)
+    
+    # Run the window cleanup
+    data_generator.clean_old_records(keep_limit=5000)
+    
+    # Train models synchronously for immediate use
+    raw_data = list(activity_logs.find({}, {"_id": 0}).sort("timestamp", -1).limit(10000))
+    if raw_data:
+        df = preprocessing.preprocess_data(raw_data)
+        models.train_clustering(df)
+        models.train_classification(df)
+        
+    return {
+        "status": "success",
+        "message": "1000 Synthetic records successfully generated, inserted, and models re-trained."
+    }
 
 app = FastAPI(title="AI Productivity Service")
 
