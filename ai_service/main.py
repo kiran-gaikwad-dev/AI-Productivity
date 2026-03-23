@@ -225,14 +225,25 @@ def get_global_stats():
         real_total = raw_total * scale_factor
         real_focus = raw_focus * scale_factor
         real_distraction = raw_distraction * scale_factor
+        
+        # Apply normalization to Chart Arrays as well so Tooltips aren't displaying impossible scales
+        normalized_top_distractions = {k: v * scale_factor for k, v in top_distractions.items()}
+        
+        normalized_hourly_dist = []
+        for h in hourly_dist:
+            normalized_hourly_dist.append({
+                "hour": h["hour"],
+                "focus": round(h["focus"] * scale_factor),
+                "distraction": round(h["distraction"] * scale_factor)
+            })
             
         result = {
             "total_minutes": real_total,
             "focus_minutes": real_focus,
             "distraction_minutes": real_distraction,
             "overall_productivity_score": float(overall_score),
-            "top_distractions": top_distractions,
-            "hourly_distribution": hourly_dist,
+            "top_distractions": normalized_top_distractions,
+            "hourly_distribution": normalized_hourly_dist,
             "regression_predictions": regression_predictions
         }
         
