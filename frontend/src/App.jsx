@@ -41,16 +41,13 @@ function App() {
         <div className="px-4 py-2 flex-grow">
           <p className="px-4 text-xs font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase mb-4 mt-2">Core Analytics</p>
           <SidebarItem icon={LayoutDashboard} label="Productivity Dashboard" active={true} />
-          <SidebarItem icon={ActivitySquare} label="Live Log Stream" active={false} />
-          <SidebarItem icon={Users} label="User Segments" active={false} />
-          
-          <p className="px-4 text-xs font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase mb-4 mt-10">System Settings</p>
-          <SidebarItem icon={Settings} label="Model Parameters" active={false} />
         </div>
         
         <div className="p-6 border-t border-slate-200 dark:border-slate-800 mt-auto">
           <div className="flex items-center space-x-3 cursor-pointer p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-            <img src="https://i.pravatar.cc/150?u=a042581f4e29026024d" alt="User" className="w-10 h-10 rounded-full border-2 border-slate-200 dark:border-slate-700" />
+            <div className="w-10 h-10 rounded-full border-2 border-slate-200 dark:border-slate-700 bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold dark:bg-slate-800 dark:text-white">
+              A
+            </div>
             <div className="flex flex-col">
               <span className="text-sm font-bold text-slate-900 dark:text-white">Admin (U102)</span>
               <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Workspace Owner</span>
@@ -85,7 +82,7 @@ function App() {
             {/* Theme Toggle Button */}
             <button 
               onClick={() => setIsDarkMode(!isDarkMode)}
-              className="p-2.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 bg-slate-50 dark:bg-slate-900 rounded-full hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden flex items-center justify-center w-10 h-10"
+              className="p-2.5 text-black dark:text-white bg-slate-50 dark:bg-slate-900 rounded-full transition-colors border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden flex items-center justify-center w-10 h-10"
               title="Toggle Dark Mode"
             >
               <AnimatePresence mode="popLayout" initial={false}>
@@ -138,8 +135,6 @@ function App() {
             >
               <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-8 px-4">Menu</h2>
               <SidebarItem icon={LayoutDashboard} label="Productivity Dashboard" active={true} />
-              <SidebarItem icon={ActivitySquare} label="Live Log Stream" active={false} />
-              <SidebarItem icon={Settings} label="System Settings" active={false} />
             </motion.div>
           </motion.div>
         )}
