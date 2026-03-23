@@ -73,7 +73,7 @@ def generate_activity_batch(batch_size=1000):
     
     return batch
 
-def clean_old_records(keep_limit=5000):
+def clean_old_records(keep_limit=10000):
     total_docs = activity_cols.count_documents({})
     if total_docs > keep_limit:
         excess = total_docs - keep_limit

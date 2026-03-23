@@ -1,23 +1,24 @@
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import FastAPI, BackgroundTasks, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pymongo import MongoClient
+from pymongo import MongoClient, ASCENDING, DESCENDING
 import os
+import time
 from dotenv import load_dotenv
 import preprocessing
 import models
 import data_generator
-import pandas as pd
-from datetime import datetime, timedelta
-from typing import Optional
 
 load_dotenv()
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-client = MongoClient(MONGO_URI)
+
+# Use a connection pool maxPoolSize for high concurrency
+client = MongoClient(MONGO_URI, maxPoolSize=50)
 db = client["ai_productivity"]
 activity_logs = db["activity_logs"]
 users_col = db["users"]
 
-app = FastAPI(title="AI Productivity Service")
+# Initialize FastAPI exactly once
+app = FastAPI(title="AI Productivity Service", version="2.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -27,11 +28,48 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Global In-Memory Cache for /stats/global to prevent DB saturation at scale
+GLOBAL_STATS_CACHE = {
+    "data": None,
+    "last_updated": 0
+}
+CACHE_TTL = 300  # Cache lasts for 5 minutes
+
+@app.on_event("startup")
+def startup_db_client():
+    """
+    Executed once upon server startup.
+    Sets up essential DB indexes and pre-loads ML models into memory.
+    """
+    # 1. Create DB Indexes for scale O(1) lookups
+    activity_logs.create_index([("timestamp", DESCENDING)])
+    activity_logs.create_index([("user_id", ASCENDING), ("timestamp", DESCENDING)])
+    
+    # 2. Pre-load ML Models into memory to guarantee ultra-fast first requests
+    try:
+        models._load_clustering_model()
+        models._load_classification_model()
+        models._load_regression_model()
+        models._load_scaler()
+    except Exception as e:
+        print(f"Startup Warning: Models not pre-loaded yet (may require initial training). {e}")
+
+def background_training_task():
+    """ Runs high CPU ML model training outside the main event loop. """
+    raw_data = list(activity_logs.find({}, {"_id": 0}).sort("timestamp", -1).limit(10000))
+    if raw_data:
+        df = preprocessing.preprocess_data(raw_data)
+        models.train_clustering(df)
+        models.train_classification(df)
+        models.train_regression(df)
+        
+        # Invalidate cache after new data triggers retraining
+        GLOBAL_STATS_CACHE["last_updated"] = 0
+
 @app.post("/seed")
 def seed_database(background_tasks: BackgroundTasks):
     """
-    Production-friendly endpoint to generate 1000 logs and retrain models.
-    Essential for Render deployment where data_generator.py can't loop infinitely.
+    Production-friendly endpoint to generate logs and train models asynchronously.
     """
     # Generate simulated logs
     batch = data_generator.generate_activity_batch(1000)
@@ -39,34 +77,20 @@ def seed_database(background_tasks: BackgroundTasks):
     # Insert safely into MongoDB
     activity_logs.insert_many(batch)
     
-    # Run the window cleanup
-    data_generator.clean_old_records(keep_limit=5000)
+    # Run the window cleanup (Expand to 10k for better ML historical variance)
+    data_generator.clean_old_records(keep_limit=10000)
     
-    # Train models synchronously for immediate use
-    raw_data = list(activity_logs.find({}, {"_id": 0}).sort("timestamp", -1).limit(10000))
-    if raw_data:
-        df = preprocessing.preprocess_data(raw_data)
-        models.train_clustering(df)
-        models.train_classification(df)
+    # Queue model training as asynchronous background task
+    background_tasks.add_task(background_training_task)
         
     return {
         "status": "success",
-        "message": "1000 Synthetic records successfully generated, inserted, and models re-trained."
+        "message": "1000 Synthetic records successfully inserted. Models are training in the background."
     }
-
-app = FastAPI(title="AI Productivity Service")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 @app.post("/train")
 def train_models():
-    # Fetch recent logs for training to avoid OOM for a scalable system
+    """ Force synchronous training and return metrics (often used by admin tasks) """
     try:
         raw_data = list(activity_logs.find({}, {"_id": 0}).sort("timestamp", -1).limit(10000))
         if not raw_data:
@@ -77,23 +101,29 @@ def train_models():
         class_res = models.train_classification(df)
         reg_res = models.train_regression(df)
         
+        # Clear cache immediately since models and metrics changed
+        GLOBAL_STATS_CACHE["last_updated"] = 0
+        
         return {
             "clustering": cluster_res, 
             "classification": class_res,
             "regression": reg_res
         }
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/predict/{user_id}")
 def user_prediction(user_id: str):
-    # Fetch recent user data
+    """ Super-fast indexed prediction lookup for specific user. """
+    # Fetch recent user data (Extremely fast due to compound index)
     raw_data = list(activity_logs.find({"user_id": user_id}, {"_id": 0}).sort("timestamp", -1).limit(500))
     if not raw_data:
-        return {"error": "User not found or no data"}
+        raise HTTPException(status_code=404, detail="User not found or no data")
         
     df = preprocessing.preprocess_data(raw_data)
-    
+    if df.empty:
+         raise HTTPException(status_code=400, detail="User data preprocessing failed")
+         
     overall_score = models.calculate_productivity_score(df)
     
     # Predict user cluster based on their average behavior
@@ -106,7 +136,7 @@ def user_prediction(user_id: str):
     
     cluster_profile = models.predict_cluster(avg_features)
     
-    # Save the computed data to the user collection
+    # Upsert the computed data to the user collection
     users_col.update_one(
         {"user_id": user_id},
         {"$set": {"cluster": cluster_profile, "productivity_score": overall_score}},
@@ -122,47 +152,49 @@ def user_prediction(user_id: str):
 
 @app.get("/stats/global")
 def get_global_stats():
+    """ Aggregated scale-ready stats endpoint with 5-minute Time-To-Live caching """
+    current_time = time.time()
+    
+    # 1. High Velocity Cache Hit (O(1))
+    if GLOBAL_STATS_CACHE["data"] and (current_time - GLOBAL_STATS_CACHE["last_updated"] < CACHE_TTL):
+        return GLOBAL_STATS_CACHE["data"]
+        
     try:
-        # Fetch ALL recent global logs unconditionally (Prevents 0 0 0 if data isn't perfectly fresh today)
+        # Cache Miss: Calculate the heavy stats
         raw_data = list(activity_logs.find({}, {"_id": 0}).sort("timestamp", -1).limit(10000))
         if not raw_data:
             return {"message": "No data available"}
             
         df = preprocessing.preprocess_data(raw_data)
+        if df.empty:
+             return {"message": "Preprocessing yield no data"}
         
-        # Calculate aggregate total time correctly
         total_time = df['duration'].sum()
         productive_time = df[df['is_distracting'] == 0]['duration'].sum()
         distraction_time = total_time - productive_time
         
         overall_score = productive_time / total_time if total_time > 0 else 0
         
-        # Calculate scaling divisor to get perfectly realistic 24-hour human metrics
-        # (Total Hours) / (Unique Days * Unique Users) = Average Minutes per User per Day
         num_days = df['timestamp'].dt.date.nunique()
         num_users = df['user_id'].nunique()
         divisor = num_days * num_users if (num_days * num_users) > 0 else 1
         
-        # Top distractions explicitly (Average daily minutes per user)
         distraction_df = df[df['is_distracting'] == 1]
         top_distractions = (distraction_df.groupby('website')['duration'].sum() / divisor).sort_values(ascending=False).head(5).to_dict()
         
-        # Segregate Focus vs Distraction by hour (Averaged per user per day)
         hourly_dist = []
         for hour in range(24):
             hour_df = df[df['hour_of_day'] == hour]
-            f_time = hour_df[hour_df['is_distracting'] == 0]['duration'].sum() / divisor
-            d_time = hour_df[hour_df['is_distracting'] == 1]['duration'].sum() / divisor
+            f_time = hour_df[hour_df['is_distracting'] == 0]['duration'].sum() / divisor if not hour_df.empty else 0
+            d_time = hour_df[hour_df['is_distracting'] == 1]['duration'].sum() / divisor if not hour_df.empty else 0
             hourly_dist.append({
                 "hour": f"{hour}:00",
                 "focus": round(f_time),
                 "distraction": round(d_time)
             })
         
-        # Generate 24-hour Focus predictions based on Linear Regression Model
         regression_predictions = []
         for hour in range(24):
-            # Evaluate expected focus time at this specific hour under base zero-distraction conditions
             features = {
                 'hour_of_day': hour,
                 'tab_switch_rate': 0.0,
@@ -177,8 +209,8 @@ def get_global_stats():
                 "time": f"{hour}:00",
                 "predicted_duration": round(pred_dur)
             })
-        
-        return {
+            
+        result = {
             "total_minutes": float(total_time) / divisor,
             "focus_minutes": float(productive_time) / divisor,
             "distraction_minutes": float(distraction_time) / divisor,
@@ -187,5 +219,11 @@ def get_global_stats():
             "hourly_distribution": hourly_dist,
             "regression_predictions": regression_predictions
         }
+        
+        # Save to Cache memory securely
+        GLOBAL_STATS_CACHE["data"] = result
+        GLOBAL_STATS_CACHE["last_updated"] = current_time
+        
+        return result
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
