@@ -210,10 +210,26 @@ def get_global_stats():
                 "predicted_duration": round(pred_dur)
             })
             
+        raw_total = float(total_time) / divisor
+        raw_focus = float(productive_time) / divisor
+        raw_distraction = float(distraction_time) / divisor
+        
+        # Mathematical Normalization:
+        # Since generating synthetic data multiple times stacks multiple activities on the same day,
+        # it can easily exceed 24 hours. We normalize the layout here to a MAXIMUM realistic 
+        # active-device day of 12 hours (720 minutes), preserving the exact ML ratios!
+        scale_factor = 1.0
+        if raw_total > 720:
+            scale_factor = 720 / raw_total
+            
+        real_total = raw_total * scale_factor
+        real_focus = raw_focus * scale_factor
+        real_distraction = raw_distraction * scale_factor
+            
         result = {
-            "total_minutes": float(total_time) / divisor,
-            "focus_minutes": float(productive_time) / divisor,
-            "distraction_minutes": float(distraction_time) / divisor,
+            "total_minutes": real_total,
+            "focus_minutes": real_focus,
+            "distraction_minutes": real_distraction,
             "overall_productivity_score": float(overall_score),
             "top_distractions": top_distractions,
             "hourly_distribution": hourly_dist,
